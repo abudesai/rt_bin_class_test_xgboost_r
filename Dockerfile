@@ -1,4 +1,4 @@
-FROM rocker/verse:latest
+FROM rocker/tidyverse:4
 
 
 # Install dependencies
@@ -11,17 +11,23 @@ RUN apt-get update --allow-releaseinfo-change && apt-get install -y \
 
 COPY ./requirements.txt .
 
-RUN R -e \
-    "install.packages( \
-        c('plumber'), \
-        repos = 'http://cran.us.r-project.org' \
-    )"
+RUN R -e "install.packages('xgboost', dependencies=T)"
+RUN R -e "install.packages('rjson', dependencies=T)"
+RUN R -e "install.packages('caTools', dependencies=T)"
+RUN R -e "install.packages('imputeTS', dependencies=T)"
+RUN R -e "install.packages('tictoc', dependencies=T)"
+RUN R -e "install.packages('pROC', dependencies=T)"
+RUN R -e "install.packages('plumber', dependencies=T)"
 
-RUN R -e \
-    "install.packages( \
-        readLines('requirements.txt'), \
-        repos = 'http://cran.us.r-project.org' \
-    )"
+
+# RUN R -e \
+#     "install.packages( \
+#         readLines('requirements.txt'), \
+#         repos = 'http://cran.us.r-project.org' \
+#     )"
+
+
+
 
 COPY app ./opt/app
 WORKDIR /opt/app
