@@ -1,0 +1,88 @@
+#!/usr/bin/env Rscript
+
+## ---- Initialising libraries ----
+library(ggplot2)
+library(tibble)
+library(tidyr)
+library(readr)
+library(purrr)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(plotly)
+library(glue)
+library(zeallot)
+library(xgboost)
+library(pROC)
+library(forcats)
+library(rjson)
+library(caTools)
+options(dplyr.summarise.inform = FALSE)
+
+## Script that holp helper functions
+source('algorithm/0.common_funcs.R')
+
+
+## Get the training data file
+data   <-
+  glue(
+    '/opt/ml_vol/inputs/data/testing/binaryClassificationBaseMainInput/',
+    list.files(path = "/opt/ml_vol/inputs/data/testing/binaryClassificationBaseMainInput")
+  )
+
+
+
+tester <- function(data_path)
+{
+  ## Load model and test data
+  trained_model         <- read_rds('/opt/ml_vol/model/artifacts/model.rds')
+  variables_to_encode   <- trained_model$variables_to_encode
+  target_class          <- trained_model$target_class
+  other_class           <- trained_model$other_class
+  id_column             <- trained_model$id_column
+  df_test             <- read_csv(data_path)
+  
+  id <- df_test %>% select(id_column)
+  
+  ## Encode categorical features with number of training encoding
+  if (!is.null(trained_model$encodings)) {
+    encodings_tmp <-
+      trained_model$encodings %>%
+      map(function(x) {
+        if (is.data.frame(x)) {
+          x[, 2, drop = TRUE] %>% set_names(x[, 1, drop = TRUE])
+        } else {
+          x
+        }
+      })
+    for (catvar in variables_to_encode) {
+      df_test[[catvar]] <-
+        encodings_tmp[[catvar]][df_test[[catvar]] %>% as.character()]
+    }
+  }
+  
+  
+  model <- trained_model$mdl
+  
+  ## Getting probability of each row for the target_class
+  test_results <-
+    tester_func(mdl = model,
+                test_set = df_test)
+  
+  test_results <- test_results$test_predictions
+  
+  test_results <-
+    test_results %>% 
+    mutate(x = 1-pred)
+  
+  names(test_results)[names(test_results) == 'pred'] <- get("target_class")
+  names(test_results)[names(test_results) == 'x'] <- get("other_class")
+  
+  ## Saving ids with prediction
+  predictions <- cbind(id, test_results)
+  predictions %>% write.csv('/opt/ml_vol/outputs/testing_outputs/test_predictions.csv')
+}
+
+
+
+tester(data)
