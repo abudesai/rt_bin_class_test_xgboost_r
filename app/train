@@ -201,5 +201,23 @@ trainer <- function(schema_path, data_path)
   
 }
 
+run_training <- function(){
+  out <- tryCatch(
+    {
+      trainer(schema, data)
+      print("training done")
+    },
+    error=function(e){
+      Error <<- e$message
+      sink(file = "/opt/ml_vol/outputs/errors/train_error.txt")
+      print(paste("Training error:"))
+      print(Error)
+      sink()
+    }
+  )
+  return(out)
+}
 
-trainer(schema, data)
+
+
+run_training()

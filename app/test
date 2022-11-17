@@ -85,4 +85,26 @@ tester <- function(data_path)
 
 
 
-tester(data)
+
+
+
+run_testing <- function(){
+  out <- tryCatch(
+    {
+      tester(data)
+      print("test predictions done")
+    },
+    error=function(e){
+      Error <<- e$message
+      sink(file = "/opt/ml_vol/outputs/errors/test_error.txt")
+      print(paste("Testing error:"))
+      print(Error)
+      sink()
+    }
+  )
+  return(out)
+}
+
+
+
+run_testing()
