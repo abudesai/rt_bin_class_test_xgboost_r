@@ -55,6 +55,8 @@ data   <-
 
 tester <- function(data_path)
 {
+  
+  print("in testing")
   ## Load model and test data
   trained_model         <- read_rds('/opt/ml_vol/model/artifacts/model.rds')
   variables_to_encode   <- trained_model$variables_to_encode
@@ -65,6 +67,8 @@ tester <- function(data_path)
   
   id <- df_test %>% select(id_column)
   
+  
+  print("preprocessing data")
   ## Encode categorical features with number of training encoding
   if (!is.null(trained_model$encodings)) {
     encodings_tmp <-
@@ -83,9 +87,12 @@ tester <- function(data_path)
   }
   
   
+  print("loading model")
   model <- trained_model$mdl
   
   ## Getting probability of each row for the target_class
+  
+  print("Making predictions")
   test_results <-
     tester_func(mdl = model,
                 test_set = df_test)
@@ -100,6 +107,8 @@ tester <- function(data_path)
   names(test_results)[names(test_results) == 'x'] <- get("other_class")
   
   ## Saving ids with prediction
+  
+  print("saving predictions")
   predictions <- cbind(id, test_results)
   predictions %>% write.csv('/opt/ml_vol/outputs/testing_outputs/test_predictions.csv', row.names = FALSE)
 }
@@ -111,7 +120,8 @@ tester <- function(data_path)
 
 run_testing <- function(){
   out <- tryCatch(
-    {
+    {      
+      print("Starting test predictions")  
       tester(data)
       print("test predictions done")
     },
