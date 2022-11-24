@@ -27,11 +27,13 @@ source('algorithm/0.common_funcs.R')
 
 
 ## get the json file for the schema
+print("get schema data...")
 schema <-
   glue('/opt/ml_vol/inputs/data_config/',
        list.files(path = "/opt/ml_vol/inputs/data_config"))
 
 ## Get the training data file
+print("get training data...")
 data   <-
   glue(
     '/opt/ml_vol/inputs/data/training/binaryClassificationBaseMainInput/',
@@ -55,19 +57,7 @@ trainer <- function(schema_path, data_path)
   eta_p       = 0.3
   max_depth_p = 5
   nrounds_p   = 1000
-  # for (hp in hpt$parameters)
-  # {
-  #   if (hp['name'] == 'nrounds')
-  #   {
-  #     nrounds_p   <- hp[['default']]
-  #   } else if (hp['name'] == 'eta')
-  #   {
-  #     eta_p       <- hp[['default']]
-  #   } else if (hp['name'] == 'max_depth')
-  #   {
-  #     max_depth_p <- hp[['default']]
-  #   }
-  # }
+
   
   
   hypergrid <- expand_grid(
@@ -78,6 +68,7 @@ trainer <- function(schema_path, data_path)
   )
 
   ## Reading schema
+  print("Reading schema..")
   file <- fromJSON(file = schema_path)
   
   ## Saving id, target, and target class in variables
@@ -91,6 +82,7 @@ trainer <- function(schema_path, data_path)
   
   
   ## Splitting data into two categories (Numerical and Categorical)
+  print("Splitting data into two categories (Numerical and Categorical)..")
   exp_vars            <- c()
   variables_to_encode <- c()
   variables_numeric     <- c()
@@ -111,12 +103,13 @@ trainer <- function(schema_path, data_path)
   }
   
   
-  ## Reading training data and dropping any row with no lablel
-  
+  ## Reading training data and dropping any row with no label
+  print("Reading training data..")  
   full_data <-
     read_csv(data_path) %>% drop_na(target_column)
   
   ## Changing datatype of categorical and numeric variables as received from json file
+  print("Changing datatype of categorical and numeric variables..")
   full_data[variables_to_encode] <-
     sapply(full_data[variables_to_encode], as.character)
   full_data[variables_numeric]   <-
@@ -128,6 +121,7 @@ trainer <- function(schema_path, data_path)
   ## Impute missing values
   ## With mean for numeric fields
   ## And mode for categorical fields
+  print("Impute missing values..")
   full_data_numeric <-
     full_data %>% select(variables_numeric) %>% na_mean(option = "mean")
   full_data_categorical <-
@@ -139,6 +133,7 @@ trainer <- function(schema_path, data_path)
     cbind(id, full_data_numeric, full_data_categorical, target)
   
   ## Splitting data to train and validation. 70% and 30%
+  print("Splitting data to train and validation..")
   set.seed(6789)
   split = sample.split(full_data[[target_column]], SplitRatio = 0.7)
   df_train_split = subset(full_data, split == TRUE)
@@ -146,6 +141,7 @@ trainer <- function(schema_path, data_path)
   
   
   ## Encoding categorical variables
+  print("feature encoding..")
   categories <- full_data[target_column] %>% distinct()
   categories <- categories[[1]]
   other_class <- categories[!(categories %in% target_class)]
@@ -191,6 +187,7 @@ trainer <- function(schema_path, data_path)
   
   ## Training model model
   ## The return of the function is list with model
+  print("Training model model..")
   trained_model <-
     trainer_func(
       train_set      = df_train,
@@ -202,6 +199,7 @@ trainer <- function(schema_path, data_path)
   
   
   ## Saving other features with the model to use in test and serve
+  print("Saving other features..")
   trained_model$exp_vars <- exp_vars
   trained_model$target_class <- target_class
   trained_model$other_class <- other_class
@@ -209,7 +207,9 @@ trainer <- function(schema_path, data_path)
   trained_model$variables_to_encode <- variables_to_encode
   trained_model$encodings <- encodings
   trained_model$best_params %>% as.data.frame() %>% print()
+  print("Saving model..")
   trained_model %>% write_rds('/opt/ml_vol/model/artifacts/model.rds')
+  print("Training done")
 }
 
 tryCatch(               
@@ -219,7 +219,8 @@ tryCatch(
     trainer(schema, data)
   },
   # Specifying error message
-  error = function(e){         
+  error = function(e){      
+    print("Train Error!")   
     write(e %>% as.character(),file="/opt/ml_vol/outputs/errors/train_failure.txt",append=FALSE)
   }
 )

@@ -35,7 +35,8 @@ WORKDIR /opt/app
 
 ENV PATH="/opt/app:${PATH}"
 
-RUN chmod +x train &&\
-    chmod +x test &&\
-    chmod +x serve 
+RUN chmod +x train
+RUN chmod +x test
+RUN chmod +x serve
+
 
