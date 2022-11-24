@@ -141,22 +141,32 @@ trainer <- function(schema_path, data_path)
   
   
   ## Encoding categorical variables
+  print("Encoding categorical variables")
   categories <- full_data[target_column] %>% distinct()
   categories <- categories[[1]]
   other_class <- categories[!(categories %in% target_class)]
+  
+  colnames(df_train_split)[colnames(df_train_split)==get('target_column')] = "label"
+  colnames(df_val_split)[colnames(df_val_split)==get('target_column')] = "label"
+  
+  
+  print("step 1")
   df_train <-
-    df_train_split %>% mutate(label = df_train_split %>% select(get('target_column')))
+    df_train_split %>% mutate(y = label)
+  
   df_val   <-
-    df_val_split   %>% mutate(label = df_val_split %>% select(get('target_column')))
+    df_val_split %>% mutate(y = label) 
   
-  my_map <- c(0, 1)
-  names(my_map) <- c(get("other_class"), get("target_class"))
+  df_train["y"][df_train["y"] == get("target_class")] <- TRUE
+  df_train["y"][df_train["y"] == get("other_class")] <- FALSE
+  df_val["y"][df_val["y"] == get("target_class")] <- TRUE
+  df_val["y"][df_val["y"] == get("other_class")] <- FALSE
   
-  df_train <-
-    df_train %>% mutate(y = my_map[unlist(label)] %>% as.logical())
-  df_val   <-
-    df_val   %>% mutate(y = my_map[unlist(label)] %>% as.logical())
+  df_train$y <- df_train$y %>% as.logical()
+  df_val$y <- df_val$y %>% as.logical()
   
+  
+  print("step 2")
   if(length(variables_to_encode) != 0)
   {
     c(df_train, df_val, dummy, encodings) %<-% target_encode_these(df_train, df_val, variables_to_encode)
@@ -171,6 +181,14 @@ trainer <- function(schema_path, data_path)
   } else{
     encodings <- NULL
   }
+  
+  
+  print("step 3")
+  df_train["label"][df_train["label"] == get("target_class")] <- 1
+  df_train["label"][df_train["label"] == get("other_class")] <- 0
+  df_val["label"][df_val["label"] == get("target_class")] <- 1
+  df_val["label"][df_val["label"] == get("other_class")] <- 0
+  
   ## Training model model
   ## The return of the function is list with model
   trained_model <-
@@ -179,12 +197,12 @@ trainer <- function(schema_path, data_path)
       validation_set = df_val,
       explanatory_variables = exp_vars ,
       target_variable = 'label',
-      hypergrid = hypergrid,
-      target_variable_mapping = my_map
+      hypergrid = hypergrid
     )
   
   
   ## Saving other features with the model to use in test and serve
+  print("saving ")
   trained_model$exp_vars <- exp_vars
   trained_model$target_class <- target_class
   trained_model$other_class <- other_class
@@ -193,7 +211,7 @@ trainer <- function(schema_path, data_path)
   trained_model$encodings <- encodings
   trained_model$best_params %>% as.data.frame() %>% print()
   trained_model %>% write_rds('/opt/ml_vol/model/artifacts/model.rds')
-  
+  print("done training")
 }
 
 run_training <- function(){
