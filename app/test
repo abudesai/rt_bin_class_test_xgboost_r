@@ -2,6 +2,8 @@
 
 ## ---- Initialising libraries ----
 
+print("importing libraries")
+
 library(dplyr)
 library(tidyr)
 library(readr)
@@ -112,10 +114,6 @@ tester <- function(data_path)
   predictions <- cbind(id, test_results)
   predictions %>% write.csv('/opt/ml_vol/outputs/testing_outputs/test_predictions.csv', row.names = FALSE)
 }
-
-
-
-
 
 
 run_testing <- function(){
