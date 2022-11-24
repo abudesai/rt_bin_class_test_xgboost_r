@@ -12,56 +12,6 @@ library(pROC)
 options(dplyr.summarise.inform = FALSE)
 
 
-
-coverager <- function(preds, actual_binary) {
-  for (thr in seq(0.01, 1, 0.01)) {
-    pred_binary <- preds > thr
-    
-    TP = sum( pred_binary &  actual_binary)
-    FP = sum( pred_binary & !actual_binary)
-    FN = sum(!pred_binary &  actual_binary)
-    TN = sum(!pred_binary & !actual_binary)
-    
-    precision_neg <- TN / (TN + FN)
-    precision_pos <- TP / (TP + FP)
-    
-    recall_neg <- TN / (TN + FP)
-    recall_pos <- TP / (TP + FN)
-    
-    ct <- tibble(
-      threshold = thr,
-      ALL = TP + FP + FN + TN,
-      `_____` = '-----',
-      coverage_N = (TN + FN) / ALL,
-      recall_N = recall_neg,
-      precision_N = precision_neg,
-      tn = TN,
-      fn = FN,
-      `____` = '----',
-      fp = FP,
-      tp = TP,
-      precision_P = precision_pos,
-      recall_P = recall_pos,
-      coverage_P = (TP + FP) / ALL,
-      bin_count_P = sum((preds %>% between(thr - 0.01, thr, incbounds = FALSE)) & actual_binary),
-      bin_count_N = sum((preds %>% between(thr - 0.01, thr, incbounds = FALSE)) & !actual_binary)
-    )
-    
-    if (thr == 0.01) {
-      coverage_table <- ct
-    } else {
-      coverage_table <- 
-        coverage_table %>% 
-        rbind(ct)
-    }
-  }
-  
-  coverage_table
-}
-
-
-
-
 trainer_func <- function(train_set, 
                          validation_set, 
                          explanatory_variables, 
@@ -128,7 +78,6 @@ trainer_func <- function(train_set,
     tibble(pred = best_val_predictions,
            actual = val_labels) %>%
     mutate(actual_aux = validation_set[[target_variable]] %>% as.character() %>% paste(actual))
-  stuff$val_ct <- coverager(preds = best_val_predictions, actual_binary = val_labels)
   
   return(stuff)
 }

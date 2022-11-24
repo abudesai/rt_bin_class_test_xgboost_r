@@ -1,0 +1,26 @@
+{
+	"parameters":
+	[
+	  {
+	    "name": "nrounds",
+	    "short_desc": "The number of rounds.",
+	    "default": 1000,
+	    "range_low": 100,
+	    "range_high": 500
+	  },
+	  {
+	    "name": "eta",
+	    "short_desc": "Step size shrinkage used in update to prevents overfitting - alias learning rate",
+	    "default": 0.3,
+	    "range_low": 0.1,
+	    "range_high": 0.5
+	  },
+	  {
+	    "name": "max_depth",
+	    "short_desc": "Maximum depth of a tree. Higher value means more complex model",
+	    "default": 5,
+	    "range_low": 3,
+	    "range_high": 8
+	  }
+  ]
+}

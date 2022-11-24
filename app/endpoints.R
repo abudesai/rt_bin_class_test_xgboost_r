@@ -88,8 +88,8 @@ function(req) {
   ## placeholder for JSON string to be printed at the end
   result <-
     tibble(
-      prediction_prob = 0,
-      prediction_label = '',
+      predicted_class_prob = 0,
+      predicted_class = '',
       warnings = ''
     )
   
@@ -98,8 +98,8 @@ function(req) {
   
   ## if we do NOT have all we need...
   if (!all(necessary_params %in% names(row))) {
-    result$prediction_prob <- 0
-    result$prediction_label <- ''
+    result$predicted_class_prob <- 0
+    result$predicted_class <- ''
     result$warnings <- 'Some necessary features are missing'
     
   } else {
@@ -108,29 +108,32 @@ function(req) {
     
     ## if any of the necessary parameters are null...
     if (row %>% sapply(is.null) %>% any()) {
-      result$prediction_prob <- 0.55
-      result$prediction_label <- 'UNCOVERED'
+      result$predicted_class_prob <- 0.55
+      result$predicted_class <- 'UNCOVERED'
       result$warnings <-
         paste('The following required parameters were NULL:',
               null_parameters)
       
     } else {
-      prediction_result <- prediction_scorer(row)
-      print(prediction_result)
-      result$prediction_prob  <- prediction_result %>% round(5)
-      result$prediction_label <-
-        if_else(prediction_result >= 0.5 ,
+      predicted_class_prob <- prediction_scorer(row)
+      print(predicted_class_prob)
+      result$predicted_class <-
+        if_else(predicted_class_prob >= 0.5 ,
                 get("target_class"),
                 get("other_class"))
-    }
+    
+    result$predicted_class_prob  <- 
+     if_else(predicted_class_prob >= 0.5 ,
+                predicted_class_prob %>% round(5),
+                1 - predicted_class_prob %>% round(5)) 
     
   }
   
-  c(result$prediction_prob,
-    result$prediction_label,
+  c(result$predicted_class_prob,
+    result$predicted_class,
     result$warnings)
 }
-
+}
 
 
 

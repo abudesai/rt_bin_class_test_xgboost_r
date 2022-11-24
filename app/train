@@ -1,28 +1,25 @@
 #!/usr/bin/env Rscript
 
 ## ---- Initialising libraries ----
-library(dplyr)
+library(ggplot2)
+library(tibble)
 library(tidyr)
 library(readr)
+library(purrr)
+library(dplyr)
+library(stringr)
+library(lubridate)
+library(plotly)
+library(glue)
+library(zeallot)
 library(xgboost)
+library(pROC)
+library(forcats)
 library(rjson)
 library(caTools)
 library(imputeTS)
-# library(glue)
-# library(ggplot2)
-# library(tibble)
-# library(purrr)
-# library(stringr)
-# library(lubridate)
-# library(plotly)
-# library(zeallot)
-# library(pROC)
-# library(forcats)
-
-options(warn=-1)
 
 options(dplyr.summarise.inform = FALSE)
-
 
 
 ## Script that holp helper functions
@@ -49,13 +46,29 @@ data   <-
 #   )
 
 trainer <- function(schema_path, data_path)
-{   
-
-  print("in training")
+{
+  
+  
+  ## Reading model hyperparameters
+  # hpt <- fromJSON(file = hpt_path)
   
   eta_p       = 0.3
   max_depth_p = 5
   nrounds_p   = 1000
+  # for (hp in hpt$parameters)
+  # {
+  #   if (hp['name'] == 'nrounds')
+  #   {
+  #     nrounds_p   <- hp[['default']]
+  #   } else if (hp['name'] == 'eta')
+  #   {
+  #     eta_p       <- hp[['default']]
+  #   } else if (hp['name'] == 'max_depth')
+  #   {
+  #     max_depth_p <- hp[['default']]
+  #   }
+  # }
+  
   
   hypergrid <- expand_grid(
     eta       = eta_p,
@@ -76,7 +89,6 @@ trainer <- function(schema_path, data_path)
     file$inputDatasets$binaryClassificationBaseMainInput$targetClass
   features = file$inputDatasets$binaryClassificationBaseMainInput$predictorFields
   
-  print("got id, targets")
   
   ## Splitting data into two categories (Numerical and Categorical)
   exp_vars            <- c()
@@ -104,8 +116,6 @@ trainer <- function(schema_path, data_path)
   full_data <-
     read_csv(data_path) %>% drop_na(target_column)
   
-  print("reading training data")
-
   ## Changing datatype of categorical and numeric variables as received from json file
   full_data[variables_to_encode] <-
     sapply(full_data[variables_to_encode], as.character)
@@ -115,9 +125,6 @@ trainer <- function(schema_path, data_path)
   id     <- full_data[, id_column]
   target <- full_data[, target_column]
   
-  
-  print("starting preprocessing")
-
   ## Impute missing values
   ## With mean for numeric fields
   ## And mode for categorical fields
@@ -130,8 +137,6 @@ trainer <- function(schema_path, data_path)
   
   full_data <-
     cbind(id, full_data_numeric, full_data_categorical, target)
-
-  print("doing train/test split")
   
   ## Splitting data to train and validation. 70% and 30%
   set.seed(6789)
@@ -141,7 +146,6 @@ trainer <- function(schema_path, data_path)
   
   
   ## Encoding categorical variables
-  print("Encoding categorical variables")
   categories <- full_data[target_column] %>% distinct()
   categories <- categories[[1]]
   other_class <- categories[!(categories %in% target_class)]
@@ -149,8 +153,6 @@ trainer <- function(schema_path, data_path)
   colnames(df_train_split)[colnames(df_train_split)==get('target_column')] = "label"
   colnames(df_val_split)[colnames(df_val_split)==get('target_column')] = "label"
   
-  
-  print("step 1")
   df_train <-
     df_train_split %>% mutate(y = label)
   
@@ -166,7 +168,6 @@ trainer <- function(schema_path, data_path)
   df_val$y <- df_val$y %>% as.logical()
   
   
-  print("step 2")
   if(length(variables_to_encode) != 0)
   {
     c(df_train, df_val, dummy, encodings) %<-% target_encode_these(df_train, df_val, variables_to_encode)
@@ -183,7 +184,6 @@ trainer <- function(schema_path, data_path)
   }
   
   
-  print("step 3")
   df_train["label"][df_train["label"] == get("target_class")] <- 1
   df_train["label"][df_train["label"] == get("other_class")] <- 0
   df_val["label"][df_val["label"] == get("target_class")] <- 1
@@ -202,7 +202,6 @@ trainer <- function(schema_path, data_path)
   
   
   ## Saving other features with the model to use in test and serve
-  print("saving ")
   trained_model$exp_vars <- exp_vars
   trained_model$target_class <- target_class
   trained_model$other_class <- other_class
@@ -211,27 +210,17 @@ trainer <- function(schema_path, data_path)
   trained_model$encodings <- encodings
   trained_model$best_params %>% as.data.frame() %>% print()
   trained_model %>% write_rds('/opt/ml_vol/model/artifacts/model.rds')
-  print("done training")
 }
 
-run_training <- function(){
-  out <- tryCatch(
-    {
-      print("Starting training")
-      trainer(schema, data)
-      print("training done")
-    },
-    error=function(e){
-      Error <<- e$message
-      sink(file = "/opt/ml_vol/outputs/errors/train_error.txt")
-      print("Training error:")
-      print(Error)
-      sink()
-    }
-  )
-  return(out)
-}
+tryCatch(               
+  
+  # Specifying expression
+  expr = {                     
+    trainer(schema, data)
+  },
+  # Specifying error message
+  error = function(e){         
+    write(e %>% as.character(),file="/opt/ml_vol/outputs/errors/train_failure.txt",append=FALSE)
+  }
+)
 
-
-
-run_training()

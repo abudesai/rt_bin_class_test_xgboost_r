@@ -2,5 +2,15 @@
 
 library(plumber)
 # 'endpoints.R' is the location of the endpoints file
-pr("endpoints.R") %>%
-  pr_run(host = "0.0.0.0", port=8080)
+tryCatch(
+  # Specifying expression
+  expr = {
+    pr("endpoints.R") %>%
+      pr_run(host = "0.0.0.0", port = 8080)
+  },
+  # Specifying error message
+  error = function(e) {
+    write(e %>% as.character(), file = "/opt/ml_vol/outputs/errors/serve_failure.txt", append =
+            FALSE)
+  }
+)
