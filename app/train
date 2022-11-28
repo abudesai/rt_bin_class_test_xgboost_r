@@ -1,6 +1,7 @@
 #!/usr/bin/env Rscript
 
 ## ---- Initialising libraries ----
+print('Initializing libraries')
 library(ggplot2)
 library(tibble)
 library(tidyr)
@@ -187,7 +188,7 @@ trainer <- function(schema_path, data_path)
   
   ## Training model model
   ## The return of the function is list with model
-  print("Training model model..")
+  print("Training model..")
   trained_model <-
     trainer_func(
       train_set      = df_train,
