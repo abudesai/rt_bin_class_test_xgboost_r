@@ -101,7 +101,10 @@ tryCatch(
   },
   # Specifying error message
   error = function(e){   
-    print("Test Error!")      
+    print("Prediction Error!")      
     write(e %>% as.character(),file="/opt/ml_vol/outputs/errors/test_failure.txt",append=FALSE)
+    quit(status=1)
   }
 )
+
+quit(status=0)
